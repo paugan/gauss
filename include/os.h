@@ -1,6 +1,30 @@
 #ifndef __GAUSS_OS_H
 #define __GAUSS_OS_H
 
+/* arch detection */
+#if defined(__x86_64__) || defined(_M_X64)
+#define GAUSS_ARCH_X86_64 1
+#elif defined(__i386__) || defined(_M_IX86)
+#define GAUSS_ARCH_X86_32 1
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define GAUSS_ARCH_ARM64 1
+#elif defined(__arm__) || defined(_M_ARM)
+#define GAUSS_ARCH_ARM32 1
+#elif defined(__powerpc64__) || defined(__ppc64__)
+#define GAUSS_ARCH_PPC64 1
+#elif defined(__powerpc__) || defined(__ppc__)
+#define GAUSS_ARCH_PPC32 1
+#elif defined(__riscv) && __riscv_xlen == 64
+#define GAUSS_ARCH_RISCV64 1
+#endif
+
+/* data model detection */
+#if defined(__LP64__) || defined(_LP64)
+#define GAUSS_DATA_MODEL_64 1
+#else
+#define GAUSS_DATA_MODEL_64 0
+#endif
+
 /* OS detection */
 #if defined(_WIN32) || defined(_WIN64)
 #define GAUSS_OS_WIN 1
@@ -14,8 +38,9 @@
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 #define GAUSS_OS_BSD 1
 #define GAUSS_OS_UNIX 1
-#elif defined(__unix__)
+#elif defined(__unix__) || defined(__unix) || defined(unix)
 #define GAUSS_OS_UNIX 1
+#define GAUSS_OS_OTHER_UNIX 1
 #else
 #error "Unknown platform"
 #endif
@@ -27,26 +52,25 @@
 #elif defined(_WIN32)
 #define GAUSS_BITS_64 0
 #endif
-#elif defined(__linux__)
-#if defined(__x86_64__) || defined(__aarch64__) || \
-    defined(__powerpc64__) || defined(__LP64__)
+#elif defined(GAUSS_OS_UNIX) && defined(GAUSS_OS_LINUX)
+#if defined(GAUSS_ARCH_X86_64) || defined(GAUSS_ARCH_ARM64) || \
+    defined(GAUSS_ARCH_PPC64) || defined(GAUSS_DATA_MODEL_64)
 #define GAUSS_BITS_64 1
 #else
 #define GAUSS_BITS_64 0
 #endif
-#elif defined(__APPLE__)
+#elif defined(GAUSS_OS_UNIX) && defined(GAUSS_OS_MACOS)
 /*
  * Darwin kernel: __LP64__ is set when long + pointers are 64-bit.
  * Also covers Apple Silicon (__aarch64__) and Intel (__x86_64__).
  */
-#if defined(__LP64__) || defined(__x86_64__) || defined(__aarch64__)
+#if defined(GAUSS_DATA_MODEL_64) || defined(GAUSS_ARCH_X86_64) || defined(GAUSS_ARCH_ARM64)
 #define GAUSS_BITS_64 1
 #else
 #define GAUSS_BITS_64 0
 #endif
-#elif defined(__FreeBSD__) || defined(__OpenBSD__) || \
-      defined(__NetBSD__) || defined(__unix__)
-#if defined(__LP64__) || defined(__x86_64__) || defined(__aarch64__)
+#elif defined(GAUSS_OS_UNIX) && (defined(GAUSS_OS_BSD) || defined(GAUSS_OS_OTHER_UNIX))
+#if defined(GAUSS_DATA_MODEL_64) || defined(GAUSS_ARCH_X86_64) || defined(GAUSS_ARCH_ARM64)
 #define GAUSS_BITS_64 1
 #else
 #define GAUSS_BITS_64 0

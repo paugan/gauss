@@ -225,9 +225,53 @@ uint32_t gauss_os_cpu_count(void)
     return ncpu > 0 ? ncpu : 1;
 }
 
-// TODO ;)
+/* memory barrier macros as funcs. */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_ATOMICS__)
+#include <stdatomic.h>
+#define __gauss_os_memory_barrier() atomic_thread_fence(memory_order_seq_cst)
+#elif defined(__GNUC__) || defined(__clang__)
+#define __gauss_os_memory_barrier() __atomic_thread_fence(__ATOMIC_SEQ_CST)
+#elif defined(GAUSS_ARCH_X86_32) || defined(GAUSS_ARCH_X86_64)
+static GAUSS_INLINE void ___gauss_os_memory_barrier(void)
+{
+    __asm__ __volatile__("mfence" ::: "memory");
+    return;
+}
+
+#define __gauss_os_memory_barrier() ___gauss_os_memory_barrier()
+#elif defined(GAUSS_ARCH_ARM64)
+static GAUSS_INLINE void ___gauss_os_memory_barrier(void)
+{
+    __asm__ __volatile__("dmb ish" ::: "memory");
+    return;
+}
+
+#define __gauss_os_memory_barrier() ___gauss_os_memory_barrier()
+#elif defined(GAUSS_ARCH_PPC32) || defined(GAUSS_ARCH_PPC64)
+static GAUSS_INLINE void ___gauss_os_memory_barrier(void)
+{
+    __asm__ __volatile__("sync" ::: "memory");
+    return;
+}
+
+#define __gauss_os_memory_barrier() ___gauss_os_memory_barrier()
+#endif
+
 void gauss_os_memory_barrier(void)
 {
+    __gauss_os_memory_barrier();
+    return;
+}
+
+void gauss_os_sleep(uint64_t msecs)
+{
+    usleep(msecs * 1000);
+    return;
+}
+
+void *gauss_os_zero_buf(void *ubuf, size_t size)
+{
+    return memset(ubuf, 0, size);
 }
 
 #endif
