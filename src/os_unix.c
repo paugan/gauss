@@ -274,4 +274,9 @@ void *gauss_os_zero_buf(void *ubuf, size_t size)
     return memset(ubuf, 0, size);
 }
 
+char *gauss_os_strdup(const char *ubuf)
+{
+    return strdup(ubuf);
+}
+
 #endif

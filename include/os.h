@@ -420,5 +420,6 @@ void gauss_os_sleep(uint64_t msecs);
 
 /* platform-specific buffer proto funcs. */
 void *gauss_os_zero_buf(void *ubuf, size_t size);
+char *gauss_os_strdup(const char *ubuf);
 
 #endif /* __GAUSS_OS_H */

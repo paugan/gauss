@@ -265,4 +265,9 @@ void *gauss_os_zero_buf(void *ubuf, size_t size)
     return SecureZeroMemory(ubuf, size);
 }
 
+char *gauss_os_strdup(const char *ubuf)
+{
+    return _strdup(ubuf);
+}
+
 #endif
