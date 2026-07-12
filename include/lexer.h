@@ -70,6 +70,8 @@ gauss_token_t *gauss_lexer_consume(gauss_lexer_t *lexer);
 gauss_token_t *gauss_lexer_lex(const char *file, const char *buf, size_t blen);
 gauss_token_t *gauss_lexer_make_etok(gauss_lexer_t *lexer, const char *ebuf);
 
+#ifdef GAUSS_DEBUG
 const char *gauss_lexer_type_to_str(gauss_token_type_t type);
+#endif
 
 #endif /* __GAUSS_LEXER_H */
