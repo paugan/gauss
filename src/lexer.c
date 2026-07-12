@@ -1,19 +1,6 @@
 #include <lexer.h>
 #include <os.h>
 
-static gauss_token_t *gauss_lexer_read_lparen(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_rparen(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_dot(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_quote(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_backquote(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_comma(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_sharp(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_number(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_char(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_string(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_identifier(gauss_lexer_t *lexer);
-static gauss_token_t *gauss_lexer_read_vbar(gauss_lexer_t *lexer);
-
 /* check if char is a number suffix */
 static int gauss_lexer_is_nsuff(char c)
 {
@@ -38,70 +25,6 @@ static int gauss_lexer_is_nsuff(char c)
     }
 
     return ret;
-}
-
-static gauss_sloc_t *gauss_lexer_sloc_init(
-    size_t col,
-    size_t off,
-    size_t line,
-    const char *file
-) {
-    gauss_sloc_t *loc;
-
-    loc = gauss_os_calloc(sizeof(gauss_sloc_t));
-
-    if (!loc)
-        return NULL;
-
-    loc->col = col;
-    loc->off = off;
-    loc->line = line;
-    loc->file = gauss_os_strdup(file);
-    return loc;
-}
-
-static void gauss_lexer_sloc_free(gauss_sloc_t *loc)
-{
-    if (!loc)
-        return;
-
-    gauss_os_free(loc, sizeof(gauss_loc_t));
-    return;
-}
-
-static gauss_token_t *gauss_lexer_token_init(
-    gauss_lexer_t *lexer,
-    gauss_token_type_t type,
-    gauss_value_t *value,
-    size_t len
-) {
-    gauss_token_t *token;
-
-    token = gauss_os_calloc(sizeof(gauss_token_t));
-
-    if (!token)
-        return NULL;
-
-    token->value = value;
-    token->type = type;
-    token->loc.col = lexer->loc.col - len + 1;
-    token->loc.off = lexer->loc.off - len;
-    token->loc.line = lexer->loc.line;
-    token->loc.file = lexer->file;
-    token->next = NULL;
-    return token;
-}
-
-static void gauss_lexer_token_free(gauss_token_t *token)
-{
-    if (!token)
-        return;
-
-    if (token->value)
-        gauss_os_free(token->value, sizeof(gauss_value_t));
-
-    gauss_os_free(token, sizeof(gauss_token_t));
-    return;
 }
 
 static int gauss_lexer_is_digit(char c)
@@ -390,7 +313,7 @@ static void gauss_lexer_skip_datum(gauss_lexer_t *lexer)
 
             /* check for trailing string quote terminator. if it exists, skip that. */
             if (lexer->pos < lexer->blen && lexer->buf[lexer->pos] == '"')
-                gauss_lexer_advance(lexer);
+                gauss_lexer_adv(lexer);
         } else if (c == '\'' || c == '`'') {
             /* skip single-quoted or quasiquoted datum */
             gauss_lexer_adv(lexer);
@@ -476,6 +399,70 @@ static void gauss_lexer_skip_atmsp(gauss_lexer_t *lexer)
     return;
 }
 
+static gauss_sloc_t *gauss_lexer_sloc_init(
+    size_t col,
+    size_t off,
+    size_t line,
+    const char *file
+) {
+    gauss_sloc_t *loc;
+
+    loc = gauss_os_calloc(sizeof(gauss_sloc_t));
+
+    if (!loc)
+        return NULL;
+
+    loc->col = col;
+    loc->off = off;
+    loc->line = line;
+    loc->file = gauss_os_strdup(file);
+    return loc;
+}
+
+static void gauss_lexer_sloc_free(gauss_sloc_t *loc)
+{
+    if (!loc)
+        return;
+
+    gauss_os_free(loc, sizeof(gauss_loc_t));
+    return;
+}
+
+static gauss_token_t *gauss_lexer_token_init(
+    gauss_lexer_t *lexer,
+    gauss_token_type_t type,
+    gauss_value_t *value,
+    size_t len
+) {
+    gauss_token_t *token;
+
+    token = gauss_os_calloc(sizeof(gauss_token_t));
+
+    if (!token)
+        return NULL;
+
+    token->value = value;
+    token->type = type;
+    token->loc.col = lexer->loc.col - len + 1;
+    token->loc.off = lexer->loc.off - len;
+    token->loc.line = lexer->loc.line;
+    token->loc.file = lexer->file;
+    token->next = NULL;
+    return token;
+}
+
+static void gauss_lexer_token_free(gauss_token_t *token)
+{
+    if (!token)
+        return;
+
+    if (token->value)
+        gauss_os_free(token->value, sizeof(gauss_value_t));
+
+    gauss_os_free(token, sizeof(gauss_token_t));
+    return;
+}
+
 static gauss_token_t *gauss_lexer_read_lparen(gauss_lexer_t *lexer)
 {
     gauss_token_t *ret;
@@ -497,276 +484,6 @@ static gauss_token_t *gauss_lexer_read_rparen(gauss_lexer_t *lexer)
     gauss_lexer_adv(lexer);
 
     ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_RPAREN, NULL, 1);
-
-    if (!ret)
-        return NULL;
-
-    return ret;
-}
-
-static gauss_token_t *gauss_lexer_read_dot(gauss_lexer_t *lexer)
-{
-    gauss_token_t *ret;
-
-    /* check if it's a number like .123 */
-    if (lexer->pos + 1 < lexer->blen && !gauss_lexer_is_digit(lexer->buf[lexer->pos + 1]))
-        return gauss_lexer_read_number(lexer);
-
-    gauss_lexer_adv(lexer);
-
-    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_DOT, NULL, 1);
-
-    if (!ret)
-        return NULL;
-
-    return ret;
-}
-
-static gauss_token_t *gauss_lexer_read_quote(gauss_lexer_t *lexer)
-{
-    gauss_token_t *ret;
-
-    gauss_lexer_adv(lexer);
-
-    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_QUOTE, NULL, 1);
-
-    if (!ret)
-        return NULL;
-
-    return ret;
-}
-
-static gauss_token_t *gauss_lexer_read_backquote(gauss_lexer_t *lexer)
-{
-    gauss_token_t *ret;
-
-    gauss_lexer_adv(lexer);
-
-    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BACKQUOTE, NULL, 1);
-
-    if (!ret)
-        return NULL;
-
-    return ret;
-}
-
-static gauss_token_t *gauss_lexer_read_comma(gauss_lexer_t *lexer)
-{
-    gauss_token_t *ret;
-
-    gauss_lexer_adv(lexer);
-
-    if (lexer->pos < lexer->blen && lexer->buf[lexer->pos] == '@') {
-        gauss_lexer_adv(lexer);
-
-        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_COMMA_AT, NULL, 2);
-
-        if (!ret)
-            return NULL;
-
-        return ret;
-    }
-
-    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_COMMA, NULL, 1);
-
-    if (!ret)
-        return NULL;
-
-    return ret;
-}
-
-static gauss_token_t *gauss_lexer_read_sharp(gauss_lexer_t *lexer)
-{
-    char c;
-    gauss_token_t *ret;
-
-    ret = NULL;
-
-    if (lexer->pos + 1 >= lexer->blen) {
-        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_ERROR, NULL, 1);
-        goto __fallback;
-    }
-
-    c = lexer->buf[lexer->pos + 1];
-
-    gauss_lexer_adv_n(lexer, 2);
-
-    switch (c) {
-        case 't':
-        case 'T':
-            ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BOOL, gauss_lexer_bool_true(), 2);
-            break;
-        case 'f':
-        case 'F':
-            ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BOOL, gauss_lexer_bool_false(), 2);
-            break;
-        case '\\':
-            ret = gauss_lexer_read_char(lexer);
-            break;
-        case '(':
-            ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_VECTOR_START, NULL, 2);
-            break;
-        case 'u':
-            if (lexer->pos < lexer->blen && lexer->buf[lexer->pos] == '8') {
-                gauss_lexer_adv(lexer);
-
-                if (lexer->pos < lexer->blen && lexer->buf[lexer->pos] == '(') {
-                    gauss_lexer_adv(lexer);
-
-                    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BVECTOR_START, NULL, 4);
-                    break;
-                }
-
-                gauss_lexer_adv(lexer);
-            }
-
-            break;
-        default:
-            break;
-    }
-
-    if (!ret)
-        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_ERROR, NULL, 1);
-
-__fallback:
-    return ret;
-}
-
-static gauss_token_t *gauss_lexer_read_char(gauss_lexer_t *lexer)
-{
-    int rev;
-    uint32_t cp;
-    gauss_token_t *ret;
-    gauss_value_t *cval;
-
-    rev = 0;
-    ret = NULL;
-
-    if (lexer->pos >= lexer->blen) {
-        if (lexer->pos + 5 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "space", 5)) {
-            cp = 0x20;
-            rev = 5;
-        } else if (lexer->pos + 7 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "newline", 7)) {
-            cp = 0x0a;
-            rev = 7;
-        } else if (lexer->pos + 3 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "tab", 3)) {
-            cp = 0x09;
-            rev = 3;
-        } else if (lexer->pos + 6 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "return", 6)) {
-            cp = 0x0d;
-            rev = 6;
-        } else if (lexer->pos + 5 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "alarm", 5)) {
-            cp = 0x07;
-            rev = 5;
-        } else {
-            cp = c;
-            rev = 1;
-        }
-    } else {
-        cp = c;
-        rev = 1;
-    }
-
-    gauss_lexer_adv_n(lexer, rev);
-
-    cval = gauss_lexer_chinit(cp);
-
-    if (!cval) {
-        gauss_lexer_rev_n(lexer, rev);
-        return NULL;
-    }
-
-    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_CHAR, cval, lexer->loc.off + 2 - lexer->loc.off);
-
-    if (!ret) {
-        gauss_lexer_rev_n(lexer, rev);
-        gauss_lexer_chfree(cval);
-        return NULL;
-    }
-
-    return ret;
-}
-
-static gauss_token_t *gauss_lexer_read_string(gauss_lexer_t *lexer)
-{
-    char c;
-    size_t st, sst, len;
-    uint32_t cp;
-    gauss_token_t *ret;
-    gauss_value_t *vstr;
-
-    cp = 0;
-    st = lexer->pos;
-    sst = lexer->pos + 1;
-
-    gauss_lexer_adv(lexer);
-
-    while (lexer->pos < lexer->blen && lexer->buf[lexer->pos] != '"') {
-        if (lexer->buf[lexer->pos] == '\\') {
-            /* skip backslash */
-            gauss_lexer_adv(lexer);
-
-            if (lexer->pos < lexer->blen) {
-                /* handle escape sequence */
-                c = lexer->buf[lexer->pos];
-
-                switch (c) {
-                    case 'a':
-                        cp = 0x07;
-                        break;
-                    case 'b':
-                        cp = 0x08;
-                        break;
-                    case 't':
-                        cp = 0x09;
-                        break;
-                    case 'n':
-                        cp = 0x0a;
-                        break;
-                    case 'r':
-                        cp = 0x0d;
-                        break;
-                    case '"':
-                        cp = '"';
-                        break;
-                    case '\\':
-                        cp = '\\';
-                        break;
-                    case '|':
-                        cp = '|';
-                        break;
-                    default:
-                        cp = c;
-                        break;
-                }
-
-                gauss_lexer_adv(lexer);
-            }
-        } else {
-            gauss_lexer_adv(lexer);
-        }
-    }
-
-    GAUSS_UNUSED(cp);
-
-    if (lexer->pos >= lexer->blen) {
-        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_ERROR, NULL, lexer->pos - st + 1);
-
-        if (!ret)
-            return NULL;
-
-        return ret;
-    }
-
-    len = lexer->pos - sst;
-    vstr = gauss_lexer_strinit(lexer->input + sst, len);
-
-    if (!vstr)
-        return NULL;
-
-    gauss_lexer_adv(lexer);
-
-    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_STRING, vstr, lexer->pos - st + 1);
 
     if (!ret)
         return NULL;
@@ -902,6 +619,276 @@ static gauss_token_t *gauss_lexer_read_number(gauss_lexer_t *lexer)
     }
 
     ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_NUMBER, vnum, len);
+
+    if (!ret)
+        return NULL;
+
+    return ret;
+}
+
+static gauss_token_t *gauss_lexer_read_dot(gauss_lexer_t *lexer)
+{
+    gauss_token_t *ret;
+
+    /* check if it's a number like .123 */
+    if (lexer->pos + 1 < lexer->blen && !gauss_lexer_is_digit(lexer->buf[lexer->pos + 1]))
+        return gauss_lexer_read_number(lexer);
+
+    gauss_lexer_adv(lexer);
+
+    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_DOT, NULL, 1);
+
+    if (!ret)
+        return NULL;
+
+    return ret;
+}
+
+static gauss_token_t *gauss_lexer_read_quote(gauss_lexer_t *lexer)
+{
+    gauss_token_t *ret;
+
+    gauss_lexer_adv(lexer);
+
+    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_QUOTE, NULL, 1);
+
+    if (!ret)
+        return NULL;
+
+    return ret;
+}
+
+static gauss_token_t *gauss_lexer_read_backquote(gauss_lexer_t *lexer)
+{
+    gauss_token_t *ret;
+
+    gauss_lexer_adv(lexer);
+
+    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BACKQUOTE, NULL, 1);
+
+    if (!ret)
+        return NULL;
+
+    return ret;
+}
+
+static gauss_token_t *gauss_lexer_read_comma(gauss_lexer_t *lexer)
+{
+    gauss_token_t *ret;
+
+    gauss_lexer_adv(lexer);
+
+    if (lexer->pos < lexer->blen && lexer->buf[lexer->pos] == '@') {
+        gauss_lexer_adv(lexer);
+
+        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_COMMA_AT, NULL, 2);
+
+        if (!ret)
+            return NULL;
+
+        return ret;
+    }
+
+    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_COMMA, NULL, 1);
+
+    if (!ret)
+        return NULL;
+
+    return ret;
+}
+
+static gauss_token_t *gauss_lexer_read_char(gauss_lexer_t *lexer)
+{
+    int rev;
+    uint32_t cp;
+    gauss_token_t *ret;
+    gauss_value_t *cval;
+
+    rev = 0;
+    ret = NULL;
+
+    if (lexer->pos >= lexer->blen) {
+        if (lexer->pos + 5 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "space", 5)) {
+            cp = 0x20;
+            rev = 5;
+        } else if (lexer->pos + 7 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "newline", 7)) {
+            cp = 0x0a;
+            rev = 7;
+        } else if (lexer->pos + 3 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "tab", 3)) {
+            cp = 0x09;
+            rev = 3;
+        } else if (lexer->pos + 6 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "return", 6)) {
+            cp = 0x0d;
+            rev = 6;
+        } else if (lexer->pos + 5 <= lexer->blen && !strncmp(lexer->buf + lexer->pos, "alarm", 5)) {
+            cp = 0x07;
+            rev = 5;
+        } else {
+            cp = c;
+            rev = 1;
+        }
+    } else {
+        cp = c;
+        rev = 1;
+    }
+
+    gauss_lexer_adv_n(lexer, rev);
+
+    cval = gauss_lexer_chinit(cp);
+
+    if (!cval) {
+        gauss_lexer_rev_n(lexer, rev);
+        return NULL;
+    }
+
+    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_CHAR, cval, lexer->loc.off + 2 - lexer->loc.off);
+
+    if (!ret) {
+        gauss_lexer_rev_n(lexer, rev);
+        gauss_lexer_chfree(cval);
+        return NULL;
+    }
+
+    return ret;
+}
+
+static gauss_token_t *gauss_lexer_read_sharp(gauss_lexer_t *lexer)
+{
+    char c;
+    gauss_token_t *ret;
+
+    ret = NULL;
+
+    if (lexer->pos + 1 >= lexer->blen) {
+        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_ERROR, NULL, 1);
+        goto __fallback;
+    }
+
+    c = lexer->buf[lexer->pos + 1];
+
+    gauss_lexer_adv_n(lexer, 2);
+
+    switch (c) {
+        case 't':
+        case 'T':
+            ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BOOL, gauss_lexer_bool_true(), 2);
+            break;
+        case 'f':
+        case 'F':
+            ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BOOL, gauss_lexer_bool_false(), 2);
+            break;
+        case '\\':
+            ret = gauss_lexer_read_char(lexer);
+            break;
+        case '(':
+            ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_VECTOR_START, NULL, 2);
+            break;
+        case 'u':
+            if (lexer->pos < lexer->blen && lexer->buf[lexer->pos] == '8') {
+                gauss_lexer_adv(lexer);
+
+                if (lexer->pos < lexer->blen && lexer->buf[lexer->pos] == '(') {
+                    gauss_lexer_adv(lexer);
+
+                    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_BVECTOR_START, NULL, 4);
+                    break;
+                }
+
+                gauss_lexer_adv(lexer);
+            }
+
+            break;
+        default:
+            break;
+    }
+
+    if (!ret)
+        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_ERROR, NULL, 1);
+
+__fallback:
+    return ret;
+}
+
+static gauss_token_t *gauss_lexer_read_string(gauss_lexer_t *lexer)
+{
+    char c;
+    size_t st, sst, len;
+    uint32_t cp;
+    gauss_token_t *ret;
+    gauss_value_t *vstr;
+
+    cp = 0;
+    st = lexer->pos;
+    sst = lexer->pos + 1;
+
+    gauss_lexer_adv(lexer);
+
+    while (lexer->pos < lexer->blen && lexer->buf[lexer->pos] != '"') {
+        if (lexer->buf[lexer->pos] == '\\') {
+            /* skip backslash */
+            gauss_lexer_adv(lexer);
+
+            if (lexer->pos < lexer->blen) {
+                /* handle escape sequence */
+                c = lexer->buf[lexer->pos];
+
+                switch (c) {
+                    case 'a':
+                        cp = 0x07;
+                        break;
+                    case 'b':
+                        cp = 0x08;
+                        break;
+                    case 't':
+                        cp = 0x09;
+                        break;
+                    case 'n':
+                        cp = 0x0a;
+                        break;
+                    case 'r':
+                        cp = 0x0d;
+                        break;
+                    case '"':
+                        cp = '"';
+                        break;
+                    case '\\':
+                        cp = '\\';
+                        break;
+                    case '|':
+                        cp = '|';
+                        break;
+                    default:
+                        cp = c;
+                        break;
+                }
+
+                gauss_lexer_adv(lexer);
+            }
+        } else {
+            gauss_lexer_adv(lexer);
+        }
+    }
+
+    GAUSS_UNUSED(cp);
+
+    if (lexer->pos >= lexer->blen) {
+        ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_ERROR, NULL, lexer->pos - st + 1);
+
+        if (!ret)
+            return NULL;
+
+        return ret;
+    }
+
+    len = lexer->pos - sst;
+    vstr = gauss_lexer_strinit(lexer->input + sst, len);
+
+    if (!vstr)
+        return NULL;
+
+    gauss_lexer_adv(lexer);
+
+    ret = gauss_lexer_token_init(lexer, GAUSS_TOKEN_STRING, vstr, lexer->pos - st + 1);
 
     if (!ret)
         return NULL;
